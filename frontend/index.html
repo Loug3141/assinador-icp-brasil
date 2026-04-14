@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FEX Assinador em Massa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Tokens ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --lime:        #32CD32;
+      --lime-dim:    #228B22;
+      --lime-glow:   rgba(50, 205, 50, 0.18);
+      --lime-faint:  rgba(50, 205, 50, 0.07);
+      --bg:          #0f0f0f;
+      --surface:     #181818;
+      --surface-2:   #222222;
+      --surface-3:   #2a2a2a;
+      --border:      #2e2e2e;
+      --border-lit:  #3d3d3d;
+      --text:        #e8e8e8;
+      --text-2:      #a0a0a0;
+      --text-3:      #5a5a5a;
+      --error:       #ff5555;
+      --error-bg:    rgba(255, 85, 85, 0.08);
+      --success:     #32CD32;
+      --warn:        #f5a623;
+      --radius:      8px;
+      --radius-lg:   12px;
+      --font-mono:   'JetBrains Mono', monospace;
+      --font:        'Montserrat', sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ── Layout ──────────────────────────────────────────────────── */
+    .shell {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 32px 0 28px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 36px;
+    }
+
+    .logo-mark {
+      width: 44px;
+      height: 44px;
+      background: var(--lime-dim);
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    .logo-mark svg { width: 24px; height: 24px; }
+
+    .logo-text h1 {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: var(--text);
+    }
+
+    .logo-text h1 span { color: var(--lime); }
+
+    .logo-text p {
+      font-size: 11.5px;
+      color: var(--text-3);
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      margin-top: 1px;
+    }
+
+    .header-badge {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--lime-dim);
+      background: var(--lime-faint);
+      border: 1px solid rgba(50,205,50,0.2);
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    /* ── Cards / Sections ────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .card + .card { margin-top: 0; }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::before {
+      content: '';
+      display: block;
+      width: 3px;
+      height: 14px;
+      background: var(--lime);
+      border-radius: 2px;
+    }
+
+    /* ── Form ────────────────────────────────────────────────────── */
+    .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-2);
+      margin-bottom: 6px;
+      letter-spacing: 0.2px;
+    }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-family: var(--font);
+      font-size: 13.5px;
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      border-color: var(--lime-dim);
+      box-shadow: 0 0 0 3px var(--lime-glow);
+    }
+
+    input::placeholder { color: var(--text-3); font-size: 12.5px; }
+
+    .field-hint {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 5px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    /* ── Buttons ──────────────────────────────────────────────────── */
+    button {
+      font-family: var(--font);
+      font-weight: 700;
+      font-size: 12.5px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .btn-primary {
+      background: var(--lime);
+      color: #000;
+      padding: 11px 22px;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #3de03d;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px var(--lime-glow);
+    }
+
+    .btn-primary:disabled {
+      opacity: .35;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-ghost {
+      background: var(--surface-3);
+      color: var(--text-2);
+      border: 1px solid var(--border);
+      padding: 10px 16px;
+      font-size: 12px;
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--surface-2);
+      color: var(--text);
+      border-color: var(--border-lit);
+    }
+
+    .btn-ghost:disabled {
+      opacity: .35;
+      cursor: not-allowed;
+    }
+
+    .btn-sm {
+      padding: 7px 14px;
+      font-size: 11.5px;
+    }
+
+    /* ── Cert Badge ───────────────────────────────────────────────── */
+    #cert-badge {
+      display: none;
+      background: var(--lime-faint);
+      border: 1px solid rgba(50,205,50,0.2);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-top: 14px;
+    }
+
+    #cert-badge.visible { display: block; }
+
+    .cert-cn {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--lime);
+      margin-bottom: 3px;
+    }
+
+    .cert-meta {
+      font-size: 11px;
+      color: var(--text-2);
+      font-family: var(--font-mono);
+    }
+
+    /* ── File List ────────────────────────────────────────────────── */
+    #file-list-section { display: none; }
+    #file-list-section.visible { display: block; }
+
+    .file-count {
+      font-size: 12px;
+      color: var(--text-2);
+      margin-bottom: 14px;
+    }
+
+    .file-count strong { color: var(--lime); }
+
+    .file-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .file-grid::-webkit-scrollbar { width: 4px; }
+    .file-grid::-webkit-scrollbar-track { background: transparent; }
+    .file-grid::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 4px; }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 12px;
+      font-size: 12.5px;
+      color: var(--text);
+    }
+
+    .file-item .fi-icon {
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .file-item .fi-size {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--text-3);
+      font-family: var(--font-mono);
+    }
+
+    /* ── Progress ─────────────────────────────────────────────────── */
+    #progress-section { display: none; }
+    #progress-section.visible { display: block; }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+
+    .progress-label {
+      font-size: 12px;
+      color: var(--text-2);
+    }
+
+    .progress-count {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--lime);
+      letter-spacing: -1px;
+    }
+
+    .progress-count span {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-3);
+      letter-spacing: 0;
+    }
+
+    .progress-bar-wrap {
+      height: 5px;
+      background: var(--surface-3);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--lime);
+      border-radius: 99px;
+      transition: width .4s ease;
+      width: 0%;
+    }
+
+    .progress-current {
+      font-size: 11.5px;
+      color: var(--text-3);
+      font-family: var(--font-mono);
+      min-height: 18px;
+    }
+
+    .progress-spinner {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border: 1.5px solid var(--lime-dim);
+      border-top-color: var(--lime);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Results ──────────────────────────────────────────────────── */
+    #results-section { display: none; }
+    #results-section.visible { display: block; }
+
+    .results-summary {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .stat-box {
+      flex: 1;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+
+    .stat-val {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    .stat-val.ok   { color: var(--lime); }
+    .stat-val.err  { color: var(--error); }
+
+    .stat-label {
+      font-size: 10.5px;
+      color: var(--text-3);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-top: 1px;
+    }
+
+    .result-items {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 260px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+    }
+
+    .result-items::-webkit-scrollbar { width: 4px; }
+    .result-items::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 4px; }
+
+    .result-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      border: 1px solid var(--border);
+    }
+
+    .result-item.ok  { background: rgba(50,205,50,0.04); border-color: rgba(50,205,50,0.15); }
+    .result-item.err { background: var(--error-bg); border-color: rgba(255,85,85,0.2); }
+
+    .result-icon { font-size: 14px; flex-shrink: 0; }
+
+    .result-name { flex: 1; color: var(--text); }
+
+    .result-output {
+      font-size: 10.5px;
+      font-family: var(--font-mono);
+      color: var(--text-3);
+    }
+
+    .result-error {
+      font-size: 11px;
+      color: var(--error);
+      font-family: var(--font-mono);
+    }
+
+    /* ── Alert ────────────────────────────────────────────────────── */
+    .alert {
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 12.5px;
+      margin-bottom: 16px;
+    }
+
+    .alert.visible { display: flex; }
+    .alert.error { background: var(--error-bg); border: 1px solid rgba(255,85,85,.25); color: var(--error); }
+    .alert.info  { background: var(--lime-faint); border: 1px solid rgba(50,205,50,.2); color: var(--lime-dim); }
+
+    .alert-icon { font-size: 16px; flex-shrink: 0; }
+    .alert-msg  { line-height: 1.5; }
+
+    /* ── Divider ──────────────────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 20px 0;
+    }
+
+    /* ── Actions bar ──────────────────────────────────────────────── */
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Responsive ───────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .shell { padding: 0 14px 60px; }
+      .results-summary { flex-wrap: wrap; }
+      .field-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Header -->
+  <header>
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 12l2 2 4-4M7 21H4a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2h-3"
+              stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M7 17h7M7 13h3" stroke="rgba(255,255,255,.5)" stroke-width="1.5"
+              stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <h1>FEX <span>Assinador</span></h1>
+      <p>Assinatura em Massa · ICP-Brasil A1</p>
+    </div>
+    <div class="header-badge">ICP-Brasil</div>
+  </header>
+
+  <!-- Alert global -->
+  <div id="global-alert" class="alert error" role="alert">
+    <span class="alert-icon">⚠</span>
+    <span class="alert-msg" id="global-alert-msg"></span>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CARD 1 · Certificado
+  ════════════════════════════════════════════════════════════ -->
+  <div class="card">
+    <div class="card-title">Certificado Digital</div>
+
+    <div class="field">
+      <label for="pfx-path">Caminho do arquivo .pfx</label>
+      <div class="field-row">
+        <input type="text" id="pfx-path"
+               placeholder="Ex.: C:\Users\Augusto\Documents\certificado.pfx" />
+        <button class="btn-ghost btn-sm" onclick="validateCert()">Verificar</button>
+      </div>
+      <div class="field-hint">Cole o caminho completo do arquivo. Clique em Verificar para confirmar.</div>
+    </div>
+
+    <div class="field">
+      <label for="pfx-password">Senha do certificado</label>
+      <input type="password" id="pfx-password" placeholder="••••••••" />
+    </div>
+
+    <!-- Badge do cert validado -->
+    <div id="cert-badge">
+      <div class="cert-cn" id="cert-cn">—</div>
+      <div class="cert-meta" id="cert-meta">—</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CARD 2 · Google Drive
+  ════════════════════════════════════════════════════════════ -->
+  <div class="card">
+    <div class="card-title">Google Drive</div>
+
+    <div class="field">
+      <label for="folder-id">ID ou URL da pasta no Google Drive</label>
+      <div class="field-row">
+        <input type="text" id="folder-id"
+               placeholder="Ex.: https://drive.google.com/drive/folders/1Abc… ou apenas o ID" />
+        <button class="btn-ghost btn-sm" onclick="listFiles()">Listar PDFs</button>
+      </div>
+      <div class="field-hint">
+        Cole o ID da pasta ou a URL completa do Google Drive. Na primeira vez, o browser abrirá para autenticação OAuth.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CARD 3 · Arquivos encontrados
+  ════════════════════════════════════════════════════════════ -->
+  <div id="file-list-section" class="card">
+    <div class="card-title">Arquivos encontrados</div>
+    <div class="file-count">
+      Encontrado(s) <strong id="file-count">0</strong> PDF(s) na pasta.
+    </div>
+    <div class="file-grid" id="file-grid"></div>
+
+    <hr class="divider" />
+
+    <div class="actions">
+      <button class="btn-primary" id="sign-btn" onclick="startSigning()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Assinar todos os PDFs
+      </button>
+      <button class="btn-ghost btn-sm" onclick="listFiles()">↺ Atualizar lista</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CARD 4 · Progresso
+  ════════════════════════════════════════════════════════════ -->
+  <div id="progress-section" class="card">
+    <div class="card-title">Assinando documentos…</div>
+
+    <div class="progress-header">
+      <span class="progress-label">Progresso</span>
+      <span class="progress-count">
+        <span id="prog-done">0</span>
+        <span> / <span id="prog-total">0</span></span>
+      </span>
+    </div>
+
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progress-fill"></div>
+    </div>
+
+    <div class="progress-current" id="progress-current">
+      <span class="progress-spinner"></span>Iniciando…
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CARD 5 · Resultados
+  ════════════════════════════════════════════════════════════ -->
+  <div id="results-section" class="card">
+    <div class="card-title">Resultado</div>
+
+    <div class="results-summary">
+      <div class="stat-box">
+        <div class="stat-val ok" id="res-ok">0</div>
+        <div class="stat-label">Assinados</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val err" id="res-err">0</div>
+        <div class="stat-label">Erros</div>
+      </div>
+    </div>
+
+    <div class="result-items" id="result-items"></div>
+
+    <div class="actions">
+      <button class="btn-primary" onclick="openOutput()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+        Abrir pasta output/
+      </button>
+      <button class="btn-ghost btn-sm" onclick="resetApp()">Nova assinatura</button>
+    </div>
+  </div>
+
+</div><!-- /shell -->
+
+<script>
+  /* ── State ───────────────────────────────────────────────────── */
+  let currentJobId  = null;
+  let pollInterval  = null;
+  let certValidated = false;
+  let fileList      = [];
+
+  /* ── API helpers ──────────────────────────────────────────────── */
+  async function api(path, body) {
+    const opts = body !== undefined
+      ? { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body) }
+      : { method: 'GET' };
+    const r = await fetch(path, opts);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    return data;
+  }
+
+  /* ── Alert helpers ────────────────────────────────────────────── */
+  function showError(msg) {
+    const el = document.getElementById('global-alert');
+    el.querySelector('#global-alert-msg').textContent = msg;
+    el.className = 'alert error visible';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function clearError() {
+    document.getElementById('global-alert').className = 'alert error';
+  }
+
+  function show(id)   { document.getElementById(id).classList.add('visible'); }
+  function hide(id)   { document.getElementById(id).classList.remove('visible'); }
+
+  /* ── 1. Validar certificado ────────────────────────────────────── */
+  async function validateCert() {
+    clearError();
+    const pfx_path     = document.getElementById('pfx-path').value.trim();
+    const pfx_password = document.getElementById('pfx-password').value;
+
+    if (!pfx_path) { showError('Informe o caminho do arquivo .pfx.'); return; }
+
+    try {
+      const data = await api('/api/validate-cert', { pfx_path, pfx_password });
+      const ci = data.cert_info;
+
+      document.getElementById('cert-cn').textContent = ci.cn || '(sem CN)';
+      document.getElementById('cert-meta').textContent =
+        `Emissor: ${ci.issuer || '—'}  ·  Validade: ${ci.valid_from} – ${ci.valid_to}`;
+
+      document.getElementById('cert-badge').classList.add('visible');
+      certValidated = true;
+    } catch (e) {
+      showError(e.message);
+      document.getElementById('cert-badge').classList.remove('visible');
+      certValidated = false;
+    }
+  }
+
+  /* ── 2. Listar arquivos ───────────────────────────────────────── */
+  async function listFiles() {
+    clearError();
+    const folder_id = document.getElementById('folder-id').value.trim();
+    if (!folder_id) { showError('Informe o ID ou URL da pasta no Google Drive.'); return; }
+
+    try {
+      const data = await api('/api/list-files', { folder_id });
+      fileList = data.files || [];
+
+      document.getElementById('file-count').textContent = fileList.length;
+
+      const grid = document.getElementById('file-grid');
+      grid.innerHTML = '';
+
+      if (fileList.length === 0) {
+        grid.innerHTML = '<div class="file-item"><span class="fi-icon">📭</span>Nenhum PDF encontrado.</div>';
+      } else {
+        fileList.forEach(f => {
+          const sizeKb = f.size ? (parseInt(f.size) / 1024).toFixed(0) + ' KB' : '—';
+          const div = document.createElement('div');
+          div.className = 'file-item';
+          div.innerHTML = `
+            <span class="fi-icon">📄</span>
+            <span>${f.name}</span>
+            <span class="fi-size">${sizeKb}</span>
+          `;
+          grid.appendChild(div);
+        });
+      }
+
+      show('file-list-section');
+      document.getElementById('sign-btn').disabled = (fileList.length === 0);
+    } catch (e) {
+      showError(e.message);
+    }
+  }
+
+  /* ── 3. Iniciar assinatura ────────────────────────────────────── */
+  async function startSigning() {
+    clearError();
+
+    const pfx_path     = document.getElementById('pfx-path').value.trim();
+    const pfx_password = document.getElementById('pfx-password').value;
+    const folder_id    = document.getElementById('folder-id').value.trim();
+
+    if (!pfx_path || !folder_id) {
+      showError('Preencha todos os campos antes de assinar.'); return;
+    }
+
+    try {
+      const data = await api('/api/sign', { folder_id, pfx_path, pfx_password });
+      currentJobId = data.job_id;
+
+      // UI: mostra progresso
+      document.getElementById('prog-done').textContent  = '0';
+      document.getElementById('prog-total').textContent = '…';
+      document.getElementById('progress-fill').style.width = '0%';
+      document.getElementById('progress-current').innerHTML =
+        '<span class="progress-spinner"></span>Iniciando…';
+
+      hide('file-list-section');
+      hide('results-section');
+      show('progress-section');
+
+      // Polling a cada 1s
+      pollInterval = setInterval(pollProgress, 1000);
+
+    } catch (e) {
+      showError(e.message);
+    }
+  }
+
+  /* ── 4. Polling de progresso ──────────────────────────────────── */
+  async function pollProgress() {
+    if (!currentJobId) return;
+    try {
+      const job = await api(`/api/progress/${currentJobId}`);
+
+      const total = job.total || 0;
+      const done  = job.done  || 0;
+      const pct   = total > 0 ? Math.round(done / total * 100) : 0;
+
+      document.getElementById('prog-done').textContent  = done;
+      document.getElementById('prog-total').textContent = total;
+      document.getElementById('progress-fill').style.width = pct + '%';
+
+      const cur = job.current_file
+        ? `<span class="progress-spinner"></span>${job.current_file}`
+        : '<span class="progress-spinner"></span>Processando…';
+      document.getElementById('progress-current').innerHTML = cur;
+
+      if (job.status === 'done' || job.status === 'error') {
+        clearInterval(pollInterval);
+        pollInterval = null;
+        renderResults(job);
+      }
+    } catch (e) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+      showError('Erro ao buscar progresso: ' + e.message);
+    }
+  }
+
+  /* ── 5. Renderizar resultados ─────────────────────────────────── */
+  function renderResults(job) {
+    hide('progress-section');
+
+    if (job.error && (!job.results || job.results.length === 0)) {
+      showError(job.error);
+      show('file-list-section');
+      return;
+    }
+
+    const results = job.results || [];
+    const ok  = results.filter(r => r.status === 'success').length;
+    const err = results.filter(r => r.status === 'error').length;
+
+    document.getElementById('res-ok').textContent  = ok;
+    document.getElementById('res-err').textContent = err;
+
+    const container = document.getElementById('result-items');
+    container.innerHTML = '';
+
+    results.forEach(r => {
+      const div = document.createElement('div');
+      div.className = `result-item ${r.status === 'success' ? 'ok' : 'err'}`;
+
+      if (r.status === 'success') {
+        div.innerHTML = `
+          <span class="result-icon">✅</span>
+          <span class="result-name">${r.name}</span>
+          <span class="result-output">→ ${r.output}</span>
+        `;
+      } else {
+        div.innerHTML = `
+          <span class="result-icon">❌</span>
+          <span class="result-name">${r.name}</span>
+          <span class="result-error">${r.error || 'Erro desconhecido'}</span>
+        `;
+      }
+      container.appendChild(div);
+    });
+
+    show('results-section');
+  }
+
+  /* ── Abrir pasta output ───────────────────────────────────────── */
+  async function openOutput() {
+    try { await api('/api/open-output', {}); } catch (e) { showError(e.message); }
+  }
+
+  /* ── Reset ────────────────────────────────────────────────────── */
+  function resetApp() {
+    currentJobId = null;
+    if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+    hide('file-list-section');
+    hide('progress-section');
+    hide('results-section');
+    clearError();
+    document.getElementById('folder-id').value = '';
+    document.getElementById('file-grid').innerHTML = '';
+    document.getElementById('result-items').innerHTML = '';
+    document.getElementById('file-count').textContent = '0';
+  }
+
+  /* ── Enter key no campo pasta ─────────────────────────────────── */
+  document.getElementById('folder-id')
+    .addEventListener('keydown', e => e.key === 'Enter' && listFiles());
+  document.getElementById('pfx-password')
+    .addEventListener('keydown', e => e.key === 'Enter' && validateCert());
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+*-lock.json
+*.lock
+node_modules/
+credentials/
+.venv/
+__pycache__/
+local/
