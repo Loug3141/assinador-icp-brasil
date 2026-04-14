@@ -611,12 +611,13 @@
 
     <div class="field">
       <label for="pfx-path">Caminho do arquivo .pfx</label>
-      <div class="field-row">
+      <div class="field-row" style="grid-template-columns: 1fr auto auto; gap: 10px;">
         <input type="text" id="pfx-path"
-               placeholder="Ex.: C:\Users\Augusto\Documents\certificado.pfx" />
+               placeholder="Clique em 'Procurar...' ou cole o caminho completo" />
+        <button class="btn-ghost btn-sm" onclick="pickPfxFile()">Procurar…</button>
         <button class="btn-ghost btn-sm" onclick="validateCert()">Verificar</button>
       </div>
-      <div class="field-hint">Cole o caminho completo do arquivo. Clique em Verificar para confirmar.</div>
+      <div class="field-hint">Selecione o arquivo de certificado digital ou cole o caminho completo. Clique em Verificar para confirmar.</div>
     </div>
 
     <div class="field">
@@ -632,26 +633,7 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════
-       CARD 2 · Google Drive
-  ════════════════════════════════════════════════════════════ -->
-  <div class="card">
-    <div class="card-title">Google Drive</div>
-
-    <div class="field">
-      <label for="folder-id">ID ou URL da pasta no Google Drive</label>
-      <div class="field-row">
-        <input type="text" id="folder-id"
-               placeholder="Ex.: https://drive.google.com/drive/folders/1Abc… ou apenas o ID" />
-        <button class="btn-ghost btn-sm" onclick="listFiles()">Listar PDFs</button>
-      </div>
-      <div class="field-hint">
-        Cole o ID da pasta ou a URL completa do Google Drive. Na primeira vez, o browser abrirá para autenticação OAuth.
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════════
-       CARD 3 · Destino dos arquivos assinados
+       CARD 2 · Destino dos arquivos assinados
   ════════════════════════════════════════════════════════════ -->
   <div class="card">
     <div class="card-title">Destino dos arquivos assinados</div>
@@ -672,10 +654,13 @@
     <div id="output-local-section" class="output-section">
       <div class="field">
         <label for="output-local-path">Pasta de destino</label>
-        <input type="text" id="output-local-path"
-               placeholder="Deixe em branco para usar a pasta output/ do programa" />
+        <div class="field-row">
+          <input type="text" id="output-local-path"
+                 placeholder="Deixe em branco para usar a pasta output/ do programa" />
+          <button class="btn-ghost btn-sm" onclick="pickLocalFolder()">Procurar…</button>
+        </div>
         <div class="field-hint">
-          Cole o caminho completo da pasta (ex.: <code style="font-family:var(--font-mono);font-size:11px">C:\Documentos\Assinados</code>).
+          Clique em "Procurar…" para selecionar uma pasta, ou cole o caminho manualmente.
           Deixe em branco para salvar na pasta <code style="font-family:var(--font-mono);font-size:11px">output/</code> padrão.
         </div>
       </div>
@@ -689,6 +674,25 @@
         <div class="field-hint">
           Os PDFs assinados serão enviados para essa pasta. Suporta Meu Drive e Drives Compartilhados.
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CARD 3 · Google Drive (ORIGEM)
+  ════════════════════════════════════════════════════════════ -->
+  <div class="card">
+    <div class="card-title">Google Drive</div>
+
+    <div class="field">
+      <label for="folder-id">ID ou URL da pasta no Google Drive</label>
+      <div class="field-row">
+        <input type="text" id="folder-id"
+               placeholder="Ex.: https://drive.google.com/drive/folders/1Abc… ou apenas o ID" />
+        <button class="btn-ghost btn-sm" onclick="listFiles()">Listar PDFs</button>
+      </div>
+      <div class="field-hint">
+        Cole o ID da pasta ou a URL completa do Google Drive. Na primeira vez, o browser abrirá para autenticação OAuth.
       </div>
     </div>
   </div>
@@ -801,6 +805,34 @@
     document.querySelector(`input[name="output-type"][value="${type}"]`).checked = true;
     document.getElementById('output-local-section').style.display = type === 'local' ? '' : 'none';
     document.getElementById('output-drive-section').style.display = type === 'drive' ? '' : 'none';
+  }
+
+  /* ── Pick PFX file (file picker nativo) ───────────────────────── */
+  async function pickPfxFile() {
+    try {
+      const data = await api('/api/pick-file', { file_type: 'pfx' });
+      if (data.file_path) {
+        document.getElementById('pfx-path').value = data.file_path;
+        clearError();
+      }
+      // Se cancelado, file_path é null — não faz nada
+    } catch (e) {
+      showError('Erro ao abrir seletor de arquivo: ' + e.message);
+    }
+  }
+
+  /* ── Pick local folder (file picker nativo) ────────────────────── */
+  async function pickLocalFolder() {
+    try {
+      const data = await api('/api/pick-folder-local', {});
+      if (data.folder_path) {
+        document.getElementById('output-local-path').value = data.folder_path;
+        clearError();
+      }
+      // Se cancelado, folder_path é null — não faz nada
+    } catch (e) {
+      showError('Erro ao abrir seletor de pasta: ' + e.message);
+    }
   }
 
   /* ── API helpers ──────────────────────────────────────────────── */

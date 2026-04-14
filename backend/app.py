@@ -2,12 +2,14 @@
 app.py — Servidor Flask: serve o frontend e expõe a API REST.
 
 Rotas:
-  GET  /                      → index.html
-  POST /api/validate-cert     → valida o .pfx antes de iniciar
-  POST /api/list-files        → lista PDFs na pasta do Drive
-  POST /api/sign              → inicia job de assinatura em background
-  GET  /api/progress/<job_id> → retorna progresso do job
-  POST /api/open-output       → abre a pasta output/ no Explorer
+  GET  /                          → index.html
+  POST /api/validate-cert         → valida o .pfx antes de iniciar
+  POST /api/list-files            → lista PDFs na pasta do Drive
+  POST /api/sign                  → inicia job de assinatura em background
+  GET  /api/progress/<job_id>     → retorna progresso do job
+  POST /api/open-output           → abre a pasta de saída no Explorer
+  POST /api/pick-file             → file picker nativo de arquivos (multiplataforma)
+  POST /api/pick-folder-local     → file picker nativo de pastas (multiplataforma)
 """
 import os
 import sys
@@ -263,6 +265,84 @@ def open_output():
     try:
         subprocess.Popen(['explorer', os.path.normpath(output_path)])
         return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/pick-folder-local', methods=['POST'])
+def pick_folder_local():
+    """
+    Abre o file picker nativo (Windows/Mac/Linux) para selecionar uma pasta.
+    Retorna o caminho absoluto da pasta selecionada, ou null se cancelado.
+    """
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        
+        # Cria uma janela Tk temporária (invisible)
+        root = tk.Tk()
+        root.withdraw()  # Oculta a janela
+        root.attributes('-topmost', True)  # Traz para frente
+        
+        # Abre o file picker de diretórios
+        folder_path = filedialog.askdirectory(
+            title='Selecionar pasta de destino',
+            mustexist=True,
+        )
+        
+        root.destroy()
+        
+        # Se o usuário cancelou, retorna null
+        if not folder_path:
+            return jsonify({'folder_path': None})
+        
+        return jsonify({'folder_path': folder_path})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/pick-file', methods=['POST'])
+def pick_file():
+    """
+    Abre o file picker nativo (Windows/Mac/Linux) para selecionar um arquivo.
+    Filtro configurável via 'file_type' no JSON: 'pfx', 'pdf', 'all'
+    Retorna o caminho absoluto do arquivo selecionado, ou null se cancelado.
+    """
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        
+        data = request.json or {}
+        file_type = data.get('file_type', 'all').lower()
+        
+        # Mapeia tipos de arquivo para filtros de diálogo
+        filetypes_map = {
+            'pfx': [('Certificado PFX', '*.pfx'), ('Todos os arquivos', '*.*')],
+            'pdf': [('Arquivo PDF', '*.pdf'), ('Todos os arquivos', '*.*')],
+            'all': [('Todos os arquivos', '*.*')],
+        }
+        filetypes = filetypes_map.get(file_type, filetypes_map['all'])
+        
+        # Cria uma janela Tk temporária (invisible)
+        root = tk.Tk()
+        root.withdraw()  # Oculta a janela
+        root.attributes('-topmost', True)  # Traz para frente
+        
+        # Abre o file picker
+        file_path = filedialog.askopenfilename(
+            title='Selecionar arquivo',
+            filetypes=filetypes,
+        )
+        
+        root.destroy()
+        
+        # Se o usuário cancelou, retorna null
+        if not file_path:
+            return jsonify({'file_path': None})
+        
+        return jsonify({'file_path': file_path})
+    
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
