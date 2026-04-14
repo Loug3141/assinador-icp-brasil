@@ -13,6 +13,7 @@ import pytz
 import qrcode
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
+from reportlab.lib.utils import ImageReader
 from reportlab.lib import colors
 from reportlab.lib.units import cm
 from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -137,6 +138,7 @@ def generate_log_page(original_pdf_path: str, cert_info: dict,
     qr_buf = io.BytesIO()
     qr_img.save(qr_buf, format='PNG')
     qr_buf.seek(0)
+    qr_buf = ImageReader(qr_buf)
 
     # ── Canvas ────────────────────────────────────────────────────────────────
     buf = io.BytesIO()
