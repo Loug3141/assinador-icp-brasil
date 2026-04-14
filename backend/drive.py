@@ -8,9 +8,9 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 
-SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+SCOPES = ['https://www.googleapis.com/auth/drive']
 
 
 def get_drive_service(credentials_dir: str):
@@ -31,15 +31,32 @@ def get_drive_service(credentials_dir: str):
     creds = None
 
     if os.path.exists(token_path):
-        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+        try:
+            creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+            # Se os escopos salvos não cobrem os escopos necessários, forçar re-autenticação
+            if creds and creds.scopes and not set(SCOPES).issubset(set(creds.scopes)):
+                creds = None
+        except (ValueError, KeyError):
+            # token.json malformado ou sem refresh_token — apaga e re-autentica
+            creds = None
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+            except Exception:
+                creds = None  # Falhou ao renovar; forçar re-auth completo
+
+        if not creds or not creds.valid:
+            if os.path.exists(token_path):
+                os.remove(token_path)
             flow = InstalledAppFlow.from_client_secrets_file(oauth_path, SCOPES)
-            # Usa porta fixa 5051 para OAuth redirect (permite registrar URL no Google Cloud Console)
-            creds = flow.run_local_server(port=8080)
+            # access_type='offline' + prompt='consent' garantem que o refresh_token seja sempre devolvido
+            creds = flow.run_local_server(
+                port=8080,
+                access_type='offline',
+                prompt='consent',
+            )
 
         with open(token_path, 'w', encoding='utf-8') as token_file:
             token_file.write(creds.to_json())
@@ -96,3 +113,28 @@ def download_file(service, file_id: str, dest_path: str) -> None:
         done = False
         while not done:
             _, done = downloader.next_chunk()
+
+
+def upload_file(service, local_path: str, filename: str, parent_folder_id: str) -> dict:
+    """
+    Faz upload de um arquivo local para uma pasta no Google Drive.
+    Retorna dict com id, name e webViewLink do arquivo criado.
+    Suporta Meu Drive e Drives Compartilhados.
+    """
+    parent_id = _extract_folder_id(parent_folder_id)
+
+    file_metadata = {
+        'name': filename,
+        'parents': [parent_id],
+    }
+
+    media = MediaFileUpload(local_path, mimetype='application/pdf', resumable=True)
+
+    result = service.files().create(
+        body=file_metadata,
+        media_body=media,
+        fields='id, name, webViewLink',
+        supportsAllDrives=True,
+    ).execute()
+
+    return result

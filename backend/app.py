@@ -21,7 +21,7 @@ from flask_cors import CORS
 # Garante que os módulos do backend são encontrados
 sys.path.insert(0, os.path.dirname(__file__))
 
-from drive import get_drive_service, list_pdfs_in_folder, download_file
+from drive import get_drive_service, list_pdfs_in_folder, download_file, upload_file
 from signer import sign_pdf_file, extract_cert_info
 
 # ─── Config ───────────────────────────────────────────────────────────────────
@@ -48,7 +48,10 @@ def _ensure_dirs():
 # ─── Job de assinatura (roda em thread separada) ──────────────────────────────
 
 def _run_signing_job(job_id: str, folder_id: str,
-                     pfx_path: str, pfx_password: str) -> None:
+                     pfx_path: str, pfx_password: str,
+                     output_type: str,
+                     output_local_path: str,
+                     output_drive_folder: str) -> None:
     job = jobs[job_id]
 
     try:
@@ -62,14 +65,24 @@ def _run_signing_job(job_id: str, folder_id: str,
         job['total'] = len(files)
         job['file_names'] = [f['name'] for f in files]
 
+        # Resolve pasta de saída local
+        local_out_dir = output_local_path.strip() if output_local_path.strip() else OUTPUT_DIR
+        if output_type == 'local':
+            os.makedirs(local_out_dir, exist_ok=True)
+
         for file_info in files:
-            file_name = file_info['id']   # id do Drive
-            display_name = file_info['name']  # nome legível
+            display_name = file_info['name']
             job['current_file'] = display_name
 
             temp_path = os.path.join(TEMP_DIR, display_name)
             output_name = display_name.replace('.pdf', '_assinado.pdf')
-            output_path = os.path.join(OUTPUT_DIR, output_name)
+
+            # Para 'local': salva diretamente em local_out_dir
+            # Para 'drive': salva temporariamente em TEMP_DIR, faz upload, depois apaga
+            if output_type == 'drive':
+                signed_path = os.path.join(TEMP_DIR, output_name)
+            else:
+                signed_path = os.path.join(local_out_dir, output_name)
 
             try:
                 # Download
@@ -78,18 +91,26 @@ def _run_signing_job(job_id: str, folder_id: str,
                 # Assina
                 meta = sign_pdf_file(
                     input_path=temp_path,
-                    output_path=output_path,
+                    output_path=signed_path,
                     pfx_path=pfx_path,
                     pfx_password=pfx_password,
                     original_file_name=display_name,
                 )
 
-                job['results'].append({
+                result_entry = {
                     'name': display_name,
                     'output': output_name,
                     'status': 'success',
                     'doc_uuid': meta.get('doc_uuid', ''),
-                })
+                }
+
+                # Se destino for Drive, faz upload do arquivo assinado
+                if output_type == 'drive':
+                    uploaded = upload_file(service, signed_path, output_name, output_drive_folder)
+                    result_entry['drive_file_id'] = uploaded.get('id', '')
+                    result_entry['drive_link'] = uploaded.get('webViewLink', '')
+
+                job['results'].append(result_entry)
 
             except Exception as e:
                 traceback.print_exc()
@@ -103,11 +124,15 @@ def _run_signing_job(job_id: str, folder_id: str,
                 # Limpa download temporário
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
+                # Limpa arquivo assinado temporário (apenas para saída Drive)
+                if output_type == 'drive' and os.path.exists(signed_path):
+                    os.remove(signed_path)
 
             job['done'] += 1
 
         job['status'] = 'done'
-        job['output_dir'] = OUTPUT_DIR
+        job['output_local_path'] = local_out_dir if output_type == 'local' else None
+        job['output_drive_folder'] = output_drive_folder if output_type == 'drive' else None
 
     except Exception as e:
         traceback.print_exc()
@@ -164,20 +189,25 @@ def sign():
     _ensure_dirs()
     data = request.json or {}
 
-    folder_id    = data.get('folder_id', '').strip()
-    pfx_path     = data.get('pfx_path', '').strip()
-    pfx_password = data.get('pfx_password', '')
+    folder_id           = data.get('folder_id', '').strip()
+    pfx_path            = data.get('pfx_path', '').strip()
+    pfx_password        = data.get('pfx_password', '')
+    output_type         = data.get('output_type', 'local')   # 'local' | 'drive'
+    output_local_path   = data.get('output_local_path', '').strip()
+    output_drive_folder = data.get('output_drive_folder', '').strip()
 
     # Validações
     errors = []
     if not folder_id:
-        errors.append('ID ou URL da pasta não informado.')
+        errors.append('ID ou URL da pasta de origem não informado.')
     if not pfx_path:
         errors.append('Caminho do certificado não informado.')
     elif not os.path.exists(pfx_path):
         errors.append(f'Arquivo .pfx não encontrado: {pfx_path}')
+    if output_type == 'drive' and not output_drive_folder:
+        errors.append('ID ou URL da pasta de destino no Google Drive não informado.')
     if errors:
-        return jsonify({'error' : ' | '.join(errors)}), 400
+        return jsonify({'error': ' | '.join(errors)}), 400
 
     # Valida certificado antes de iniciar
     try:
@@ -185,21 +215,27 @@ def sign():
     except Exception as e:
         return jsonify({'error': f'Erro ao ler certificado: {e}'}), 400
 
+    effective_output_type = output_type if output_type in ('local', 'drive') else 'local'
+
     # Cria job
     job_id = str(uuid_lib.uuid4())
     jobs[job_id] = {
-        'status':       'running',
-        'total':        0,
-        'done':         0,
-        'current_file': '',
-        'results':      [],
-        'cert_info':    cert_info,
-        'error':        None,
+        'status':               'running',
+        'total':                0,
+        'done':                 0,
+        'current_file':         '',
+        'results':              [],
+        'cert_info':            cert_info,
+        'error':                None,
+        'output_type':          effective_output_type,
+        'output_local_path':    output_local_path or OUTPUT_DIR,
+        'output_drive_folder':  output_drive_folder,
     }
 
     thread = threading.Thread(
         target=_run_signing_job,
-        args=(job_id, folder_id, pfx_path, pfx_password),
+        args=(job_id, folder_id, pfx_path, pfx_password,
+              effective_output_type, output_local_path, output_drive_folder),
         daemon=True,
     )
     thread.start()
@@ -217,10 +253,15 @@ def progress(job_id: str):
 
 @app.route('/api/open-output', methods=['POST'])
 def open_output():
-    """Abre a pasta output/ no Windows Explorer."""
+    """Abre uma pasta local no Windows Explorer."""
     import subprocess
+    data = request.json or {}
+    output_path = data.get('output_path', '').strip() or OUTPUT_DIR
+    # Sanitiza: apenas caminhos absolutos do sistema de arquivos local
+    if not os.path.isabs(output_path):
+        output_path = OUTPUT_DIR
     try:
-        subprocess.Popen(['explorer', OUTPUT_DIR])
+        subprocess.Popen(['explorer', os.path.normpath(output_path)])
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
