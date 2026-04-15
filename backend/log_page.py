@@ -186,9 +186,17 @@ def generate_log_page(original_pdf_path: str, cert_info: dict,
                 QR_SIZE, QR_SIZE)
 
     # Texto do documento
+    # Largura disponível: do início do texto até o QR code (com margem)
+    MAX_FN_W = CONTENT_W - QR_SIZE - 32
+    fn_display = file_name
+    while stringWidth(fn_display, 'Helvetica-Bold', 9) > MAX_FN_W and len(fn_display) > 4:
+        fn_display = fn_display[:-2]
+    if fn_display != file_name:
+        fn_display = fn_display[:-1] + '…'
+
     c.setFont('Helvetica-Bold', 9)
     c.setFillColor(C_TEXT)
-    c.drawString(MARGIN + 12, y - 16, file_name)
+    c.drawString(MARGIN + 12, y - 16, fn_display)
 
     c.setFont('Helvetica', 7.5)
     c.setFillColor(C_MUTED)
