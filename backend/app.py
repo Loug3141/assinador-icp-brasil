@@ -28,12 +28,22 @@ from signer import sign_pdf_file, extract_cert_info
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FROZEN = os.environ.get('FEX_FROZEN', '0') == '1'
+
+if FROZEN:
+    # Diretório do executável (dados persistentes)
+    BASE_DIR = os.environ.get('FEX_BASE_DIR', os.path.dirname(sys.executable))
+    # Diretório dos recursos empacotados
+    BUNDLE_DIR = os.environ.get('FEX_BUNDLE_DIR', getattr(sys, '_MEIPASS', BASE_DIR))
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    BUNDLE_DIR = BASE_DIR
+
 TEMP_DIR  = os.path.join(BASE_DIR, 'temp')
 OUTPUT_DIR = os.path.join(BASE_DIR, 'output')
 CREDENTIALS_DIR = os.path.join(BASE_DIR, 'credentials')
 
-app = Flask(__name__, static_folder=os.path.join(BASE_DIR, 'frontend'))
+app = Flask(__name__, static_folder=os.path.join(BUNDLE_DIR, 'frontend'))
 CORS(app)
 
 # Dict global para rastreamento de jobs em andamento
@@ -255,15 +265,22 @@ def progress(job_id: str):
 
 @app.route('/api/open-output', methods=['POST'])
 def open_output():
-    """Abre uma pasta local no Windows Explorer."""
+    """Abre uma pasta local no Explorer (Windows) ou Finder (macOS)."""
     import subprocess
+    import platform
     data = request.json or {}
     output_path = data.get('output_path', '').strip() or OUTPUT_DIR
     # Sanitiza: apenas caminhos absolutos do sistema de arquivos local
     if not os.path.isabs(output_path):
         output_path = OUTPUT_DIR
     try:
-        subprocess.Popen(['explorer', os.path.normpath(output_path)])
+        system = platform.system()
+        if system == 'Windows':
+            subprocess.Popen(['explorer', os.path.normpath(output_path)])
+        elif system == 'Darwin':
+            subprocess.Popen(['open', output_path])
+        else:
+            subprocess.Popen(['xdg-open', output_path])
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
