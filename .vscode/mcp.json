@@ -1,0 +1,9 @@
+{
+	"servers": {
+		"context-mode": {
+			"command": "context-mode",
+			"type": "stdio"
+		}
+	},
+	"inputs": []
+}
